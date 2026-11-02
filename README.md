@@ -11,7 +11,7 @@ For full details on the contents of the K locus database and how to use it, plea
 - [QC-ing final dataset and subsetting](#qc-ing-final-dataset-and-subsetting)
 - [Database development](database-development)
 - [Database testing](database-testing)
-- [Figures and statistics](#figures-and-statistics)
+- [Data summary, statistics and figures](#data-summary-statistics-and-figures)
 
 ## Accessing, assembling and QC-ing preliminary dataset
 
@@ -42,7 +42,7 @@ These analyses were performed on a distributed compute cluster, [M3](https://doc
 ## Database testing
 
 
-## Figures and statistics
+## Data summary, statistics and figures
 
 
 
