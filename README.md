@@ -17,35 +17,38 @@ For full details on the contents of the K locus database and how to use it, plea
 
 These analyses were performed on a distributed compute cluster, [M3](https://docs.erc.monash.edu/Compute/HPC/M3/), which leverages a slurm queuing system. The majority of the files outlined below represent example slurm submission scripts. The number of nodes and cores and the amount of memory requested for each analysis is shown within the script. (Note: for security reasons, file paths have been abbreviated, and account and queue names have been removed.)
 
-1. `1_download_sra_reads.sh` - download reads with enaBrowserTools
+1. `1_download_sra_reads.sh` - download reads from European Nucleotide Archive with enaBrowserTools
 2. `2_trim_reads.sh` - trim Illumina reads with Trim Galore
-3. `3_unicycler.sh` - assemble short reads with Unicycler
-4. `4_flye.sh` - assemble long reads with Flye
-5. `5_multi_polishing.sh` - polish long read assemblies with short reads, using BWA, SamTools and Pilon
-6. `6_metaphlan.sh` - run MetaPhlAn on reads
-7. `7_kleborate.sh`- run Kleborate
+3. `3_unicycler.sh` - assemble Illumina reads with Unicycler
+4. `4_flye.sh` - assemble PacBio reads with Flye
+5. `5_multi_polishing.sh` - polish Flye assemblies with Illumina reads, using BWA, SamTools and Pilon
+6. `6_metaphlan.sh` - run MetaPhlAn on reads to detect species contamination
+7. `7_kleborate_v2.sh`- run Kleborate on assemblies for species confirmation and assembly statistics
 
 ## QC-ing final dataset and subsetting
 
+These analyses were performed on a distributed compute cluster, [M3](https://docs.erc.monash.edu/Compute/HPC/M3/), which leverages a slurm queuing system. The number of nodes and cores and the amount of memory requested for each analysis is shown within the slurm submission scripts. (Note: for security reasons, file paths have been abbreviated, and account and queue names have been removed.) The Mash dereplication process was partly perfomed within R on a standard Macbook Air, M4 (see file 9 for details).
+
+8. `8_checkM2.sh` - run checkM2 on genome assemblies to generate QC metrics for genomes not accessed via AllTheBacteria
+9. `9_mash_dereplication.md` - includes code for running Mash on the M3 compute infrastructure, plus R code for processing and dereplicating genomes into the non-redundant dataset
+10. `10_kleborate_v3 - run Kleborate on assemblies for assembly statistics and 7-gene multi-locus sequence types
 
 ## Database development
 
 These analyses were performed on a distributed compute cluster, [M3](https://docs.erc.monash.edu/Compute/HPC/M3/), which leverages a slurm queuing system. The majority of the files outlined below represent example slurm submission scripts. The number of nodes and cores and the amount of memory requested for each analysis is shown within the script. (Note: for security reasons, file paths have been abbreviated, and account and queue names have been removed.)
 
-`kaptive.sh` - extract K loci using BLASTn implemented in Kaptive 2
-`meshclust.sh` - cluster K loci with MeShClust
-`prokka.sh` - annotate loci with Prokka
-`mmseqs.sh` - all vs all pairwise protein comparison
-`hmm.sh` - run HMM search to inform manual annotation updates
-`clinker.sh` - run Clinker to visualise and compare loci - change amino acid identity threshold within the graphical interface to identify loci that share all genes above the 82.5% threshold. (Note: Clinker was run on a Macbook Air, M4)  
+11. `11_kaptive_v2.sh` - extract K loci using BLASTn implemented in Kaptive 2
+12. `12_meshclust.sh` - cluster K loci with MeShClust
+13. `13_prokka.sh` - annotate loci with Prokka
+14. `14_mmseqs.sh` - all vs all pairwise protein comparison
+15. `15_hmm.sh` - run HMM search to inform manual annotation updates
+16. `16_K_locus_extraction.md` - includes python code for extracting additional K loci from assembly files by BLAST search, alongside instructions for running the code and reference flanking gene sequences
+17. `17_clinker.sh` - run Clinker to visualise and compare loci - change amino acid identity threshold within the graphical interface to identify loci that share all genes above the 82.5% threshold. (Note: Clinker was run on a Macbook Air, M4)  
 
 ## Database testing
 
-
-## Data summary, statistics and figures
-
-
-
+18. `18_kaptive_v3.sh` - run Kaptive v3.2.1 to generate typing results reported in paper using the _K. oxytoca_ Species Complex database archived [here](10.5281/zenodo.22866203) and the _K. pneumoniae_ Species Complex database archived here
+19. `19_hmm_wzy.sh` - run HMM search for _wzy_ genes in genomes with K loci without annotated _wzy_ 
 
 ## Citations
 
