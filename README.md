@@ -30,8 +30,8 @@ These analyses were performed on a distributed compute cluster, [M3](https://doc
 These analyses were performed on a distributed compute cluster, [M3](https://docs.erc.monash.edu/Compute/HPC/M3/), which leverages a slurm queuing system. The number of nodes and cores and the amount of memory requested for each analysis is shown within the slurm submission scripts. (Note: for security reasons, file paths have been abbreviated, and account and queue names have been removed.) The Mash dereplication process was partly perfomed within R on a standard Macbook Air, M4 (see file 9 for details).
 
 8. `8_checkM2.sh` - run checkM2 on genome assemblies to generate QC metrics for genomes not accessed via AllTheBacteria
-9. `9_mash_dereplication.md` - includes code for running Mash on the M3 compute infrastructure, plus R code for processing and dereplicating genomes into the non-redundant dataset
-10. `10_kleborate_v3 - run Kleborate on assemblies for assembly statistics and 7-gene multi-locus sequence types
+9. `9_mash_dereplication.md` - includes code for running Mash, plus R code for processing and dereplicating genomes into the non-redundant dataset
+10. `10_kleborate_v3` - run Kleborate on assemblies for assembly statistics and 7-gene multi-locus sequence types
 
 ## Database development
 
