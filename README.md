@@ -35,19 +35,19 @@ These analyses were performed on a distributed compute cluster, [M3](https://doc
 
 ## Database development
 
-These analyses were performed on a distributed compute cluster, [M3](https://docs.erc.monash.edu/Compute/HPC/M3/), which leverages a slurm queuing system. The majority of the files outlined below represent example slurm submission scripts. The number of nodes and cores and the amount of memory requested for each analysis is shown within the script. (Note: for security reasons, file paths have been abbreviated, and account and queue names have been removed.)
+Unless otherwise stated, these analyses were performed on a distributed compute cluster, [M3](https://docs.erc.monash.edu/Compute/HPC/M3/), which leverages a slurm queuing system. The majority of the files outlined below represent example slurm submission scripts. The number of nodes and cores and the amount of memory requested for each analysis is shown within the script. (Note: for security reasons, file paths have been abbreviated, and account and queue names have been removed.)  
 
 11. `11_kaptive_v2.sh` - extract K loci using BLASTn implemented in Kaptive 2
 12. `12_meshclust.sh` - cluster K loci with MeShClust
 13. `13_prokka.sh` - annotate loci with Prokka
 14. `14_mmseqs.sh` - all vs all pairwise protein comparison
-15. `15_hmm.sh` - run HMM search to inform manual annotation updates
+15. `15_protein_classification` - this directory contains a Jupyter notebook with the code for clustering (via MMSeqs2) and annotating K locus genes via HMM search. Output tables as defined in the Notebook are also included. (Note: this step was run on a MacBook Air, M2)
 16. `16_K_locus_extraction.md` - includes python code for extracting additional K loci from assembly files by BLAST search, alongside instructions for running the code and reference flanking gene sequences
 17. `17_clinker.sh` - run Clinker to visualise and compare loci - change amino acid identity threshold within the graphical interface to identify loci that share all genes above the 82.5% threshold. (Note: Clinker was run on a Macbook Air, M4)  
 
 ## Database testing
 
-18. `18_kaptive_v3.sh` - run Kaptive v3.2.1 to generate typing results reported in paper using the _K. oxytoca_ Species Complex database archived [here](10.5281/zenodo.22866203) and the _K. pneumoniae_ Species Complex database archived here
+18. `18_kaptive_v3.sh` - run Kaptive v3.2.1 to generate typing results reported in paper using the _K. oxytoca_ Species Complex database archived [here](10.5281/zenodo.22866203) and the _K. pneumoniae_ Species Complex database archived [here](https://github.com/klebgenomics/Kaptive/releases/tag/v3.2.0).
 19. `19_hmm_wzy.sh` - run HMM search for _wzy_ genes in genomes with K loci without annotated _wzy_ 
 
 ## Citations
