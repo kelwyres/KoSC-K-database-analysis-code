@@ -1,0 +1,618 @@
+---
+title: "KoSC K database"
+author: "Naoise McGarry, Kelly Wyres"
+date: "30 Oct 26"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+require('knitr')
+opts_chunk$set(fig.width=10, fig.height=10, fig.path='./figs/', echo=T, dev=c('png','pdf'), warning=FALSE, message=FALSE)
+```
+
+
+#load packages 
+```{r}
+library(tidyverse)
+library(readxl)
+library(vegan)
+library(reshape2)
+library(patchwork)
+```
+
+# K locus annotations - reported in main text
+
+#### Load data
+```{r}
+kosc_summary <- read_csv("KoSC_K_functional_reannotated.csv") # output from gene clustering and HMM searches
+```
+
+## Count unique GTs
+```{r}
+kosc_summary %>%
+  filter(Is_Glycosyl_transferase == TRUE) %>%
+  summarise(
+    total_GTRs = n(),
+    distinct_CC = n_distinct(CC),
+  )
+```
+## GT per locus counts
+```{r}
+kosc_summary %>%
+  filter(Is_Glycosyl_transferase %in% c("TRUE")) %>%
+  group_by(Locus) %>%
+  summarise(
+    n = n(),
+    Locus = paste(unique(Locus), collapse = ", "),
+    .groups = "drop"
+  )
+```
+
+## Count _wbaP_ 'PRK15204.1' / _wcaJ_ 'PRK10124.1'
+```{r}
+kosc_summary %>% filter(PGAP_Best %in% c('PRK15204.1', 'PRK10124.1')) %>%
+  count(PGAP_Best)
+```
+
+## Total number of unique loci with _wzy_ annotated
+```{r}
+kosc_summary %>%
+  filter(Wzy_Best %in% c("WzyA","WzyB","WzyC")) %>%
+  summarise(n_loci = n_distinct(Locus))
+```
+
+## Total number of loci with _wzx_ annotated
+```{r}
+kosc_summary %>%
+  filter(Gene_name %in% c("wzx")) %>%
+  summarise(total = n())
+```
+
+# Typing stats - reported in main text
+
+
+#### Load data
+```{r label, options}
+tableS3 <- read_excel("Supplementary_Tables.xlsx", sheet = "Supp_Table3")
+```
+
+## Final dataset
+
+#### Count total genomes in final dataset
+```{r}
+tableS3 %>% group_by(`Included in final dataset? (yes/no)`) %>% summarise(n=n())
+
+# note NA represets rare species which did not have qualibact QC thresholds, but passed based on empiric criteria
+```
+
+#### Filter to final dataset
+```{r}
+tableS3 %>% filter(`Included in final dataset? (yes/no)` == "yes") -> final_dataset
+```
+
+
+#### Typing rate KoSC DB for final dataset
+
+```{r}
+final_dataset %>% group_by(KoSC_match_confidence) %>% summarise(n=n())
+```
+
+#### Typing rate by genome source
+```{r}
+final_dataset %>% filter(Genome_source != "In house") %>% group_by(Genome_source, KoSC_match_confidence) %>% summarise(n=n()) %>% dcast(Genome_source ~ KoSC_match_confidence) -> contigency_table
+```
+
+```{r}
+contigency_table %>% mutate(rate = (Typeable / (Typeable + Untypeable)*100))
+```
+
+#### pairwise prop test
+```{r}
+as.matrix(contigency_table[2:3])
+pairwise.prop.test(as.matrix(contigency_table[2:3]), p.adjust.method = "bonferroni")
+```
+
+#### Supplementary Figure 6 - assembly metrics by source and species
+
+##### No Contigs
+```{r, fig.width = 12}
+final_dataset %>% filter(Species %in% c("K. oxytoca", "K. michiganensis", "K. pasteurii", "K. grimontii")) %>%
+  ggplot(aes(x= Genome_source, y = `No. Contigs`, fill = Genome_source)) + geom_boxplot() +
+  scale_x_discrete(limits = c("NCBI RefSeq", "NCBI GenBank", "AllTheBacteria", "Pathogenwatch"), labels = c("RS", "GB", "ATB", "PW")) +
+  scale_y_continuous(breaks = seq(0, 500, 50)) +
+  scale_fill_manual(values= c("#b2df8a", "#a6cee3", "#1f78b4", "#fb9a99")) +
+  theme_bw() + theme(axis.text.x = element_text(angle=45, hjust=1)) + guides(fill=FALSE) +
+  xlab("Genome Source") +
+  facet_wrap(. ~ Species, nrow=1) -> plot_n_contigs
+```
+
+##### Genome Length
+```{r, fig.width = 12}
+final_dataset %>% filter(Species %in% c("K. oxytoca", "K. michiganensis", "K. pasteurii", "K. grimontii")) %>%
+  ggplot(aes(x= Genome_source, y = `Genome Length`, fill = Genome_source)) + geom_boxplot() +
+  scale_x_discrete(limits = c("NCBI RefSeq", "NCBI GenBank", "AllTheBacteria", "Pathogenwatch")) +
+  scale_y_continuous(breaks = seq(0, 7000000, 250000), labels = seq(0, 7, 0.25)) +
+  scale_fill_manual(values= c("#b2df8a", "#a6cee3", "#1f78b4", "#fb9a99")) +
+  theme_bw() + theme(axis.text.x = element_blank(), axis.title.x = element_blank()) +
+  guides(fill=FALSE) +
+  ylab("Genome Length (Mbp)") +
+  facet_wrap(. ~ Species, nrow=1) -> plot_genome_length
+```
+
+##### N50
+```{r, fig.width = 12}
+final_dataset %>% filter(Species %in% c("K. oxytoca", "K. michiganensis", "K. pasteurii", "K. grimontii")) %>%
+  ggplot(aes(x= Genome_source, y = N50, fill = Genome_source)) + geom_boxplot() +
+  scale_x_discrete(limits = c("NCBI RefSeq", "NCBI GenBank", "AllTheBacteria", "Pathogenwatch")) +
+  scale_y_continuous(breaks = seq(0, 7000000, 1000000), labels = seq(0, 7, 1)) +
+  scale_fill_manual(values= c("#b2df8a", "#a6cee3", "#1f78b4", "#fb9a99")) +
+  theme_bw() + theme(axis.text.x = element_blank(), axis.title.x = element_blank()) +
+  guides(fill=FALSE) +
+  ylab("N50 (Mbp)") +
+  facet_wrap(. ~ Species, nrow=1) -> plot_N50
+```
+
+##### Combined figure - Supp Figure 7
+```{r assembly_metrics_plot, fig.width = 12, fig.height = 8}
+plot_N50 + plot_genome_length + plot_n_contigs + plot_layout(nrow = 3)
+```
+*Note for the published version of the figure, sample sizes as calculated below were manually added to X-axis labels using Adobe Illustrator.*
+
+#### Get genome counts per column
+```{r}
+final_dataset %>% filter(Species %in% c("K. oxytoca", "K. michiganensis", "K. pasteurii", "K. grimontii")) %>% group_by(Genome_source, Species) %>% summarise(n=n())
+```
+
+## Summarise features captured by non-redundant dataset
+
+#### Filter to non-redundant
+
+```{r}
+final_dataset %>% filter(`Included in nonredundant dataset? (yes/no)` == "yes") -> nonredundant_dataset
+```
+
+#### Number distint STs
+```{r}
+nonredundant_dataset %>% group_by(ST) %>% summarise(n=n()) %>% nrow()
+```
+
+#### Counts by country
+```{r}
+nonredundant_dataset %>% group_by(Country) %>% summarise(n=n())
+```
+
+#### Counts by source
+```{r}
+nonredundant_dataset %>% group_by(Isolation_source) %>% summarise(n=n())
+```
+
+#### Counts by years
+```{r}
+nonredundant_dataset %>% group_by(Collection_year) %>% summarise(n=n()) %>% arrange(Collection_year)
+```
+
+#### Counts by species
+```{r}
+nonredundant_dataset %>% group_by(Species) %>% summarise(n=n())
+```
+
+## Typing rates - nonredundant dataset
+
+#### % typed with KoSC DB
+```{r}
+nonredundant_dataset %>%
+  count(KoSC_match_confidence) %>%
+  mutate(percent = 100 * n / sum(n))
+```
+
+#### % typed with KpSC DB
+```{r}
+nonredundant_dataset %>%
+  count(Kp_match_confidence) %>%
+  mutate(percent = 100 * n / sum(n))
+```
+
+#### Statistical comparison KoSC typed vs Kp typed
+
+```{r}
+library(stats)
+
+
+paired_table <- matrix(c(2193, 1129, 51, 1115), ncol = 2)
+
+
+mcnemar.test(paired_table)
+
+```
+#### n K-loci identified using KoSC db
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_best_match_K_locus) %>% summarise(n=n()) %>% nrow()
+```
+
+
+#### n K-loci identified using Kp db
+```{r}
+nonredundant_dataset %>% filter(Kp_match_confidence == "Typeable") %>% group_by(Kp_best_match_K_locus) %>% summarise(n=n()) %>% nrow()
+```
+
+# Typing stats - reported in supplementary text
+
+#### Get match quality info for KoSC db typeables
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_match_problems) %>% summarise(n=n())
+```
+
+#### Get match quality info for Kp db typeables
+```{r}
+nonredundant_dataset %>% filter(Kp_match_confidence == "Typeable") %>% group_by(Kp_match_problems) %>% summarise(n=n())
+```
+
+#### Format KoSC matches for stats comparison
+*remove % characters for ID and cov*
+*turn into long table with a column labelling by DB*
+```{r}
+nonredundant_dataset %>% mutate(KoSC_match_id = (str_remove_all(KoSC_match_id, "%")), KoSC_match_cov = (str_remove_all(KoSC_match_cov, "%"))) %>% select(KoSC_match_confidence, KoSC_match_id, KoSC_match_cov) %>% mutate(database = "KoSC") %>% rename(id = KoSC_match_id, cov = KoSC_match_cov, confidence = KoSC_match_confidence) -> match_comparison
+```
+
+#### Format Kp matches for stats comparison
+*remove % characters for ID and cov*
+*turn into long table with a column labelling by DB and bind to above*
+```{r}
+nonredundant_dataset %>% mutate(Kp_match_id = (str_remove_all(Kp_match_id, "%")), Kp_match_cov = (str_remove_all(Kp_match_cov, "%"))) %>% select(Kp_match_confidence, Kp_match_id, Kp_match_cov) %>% mutate(database = "Kp") %>% rename(id = Kp_match_id, cov = Kp_match_cov, confidence = Kp_match_confidence) %>% rbind(., match_comparison) -> match_comparison
+```
+
+
+#### Calculate stats for coverage using Wilcox
+```{r}
+match_comparison %>% filter (confidence == "Typeable") %>% mutate(cov = as.numeric(cov)) %>%  wilcox.test(cov ~ database, data = .)
+```
+
+#### Calculate stats for identity using Wilcox
+```{r}
+match_comparison %>% filter (confidence == "Typeable") %>% mutate(id = as.numeric(id)) %>%  wilcox.test(id ~ database, data = .)
+```
+#### Print average coverage / identity of 'Typeable' genomes
+```{r}
+match_comparison %>%
+  filter(confidence == "Typeable") %>%
+  mutate(
+    cov   = as.numeric(cov),
+    id = as.numeric(id)
+  ) %>%
+  group_by(database) %>%
+  summarise(
+    n = n(),
+    median_cov = (median(cov, na.rm = TRUE))*100,
+    median_id = (median(id, na.rm = TRUE))*100,
+    .groups = "drop"
+  )
+```
+
+#### Comparing Kp and KoSC results for orthologous loci
+*Mark those that are typable with Kp db where the Best match type does not match the KoSC type and is not a direct or similar ortholog as per ortholog list*
+```{r}
+nonredundant_dataset %>% mutate(mismatch_types = (if_else(Kp_match_confidence == "Typeable" & (Kp_best_match_K_locus != KoSC_best_match_K_locus), "mismatch", "ok"))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL152" & KoSC_best_match_K_locus == "KL10", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL102" & KoSC_best_match_K_locus == "KL11", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL181" & KoSC_best_match_K_locus == "KL19", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL186" & KoSC_best_match_K_locus == "KL23", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL109" & KoSC_best_match_K_locus == "KL14", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL47" & KoSC_best_match_K_locus == "KL30", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL43" & KoSC_best_match_K_locus == "KL6", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL164" & KoSC_best_match_K_locus == "KL57", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL68" & KoSC_best_match_K_locus == "KL83", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL26" & KoSC_best_match_K_locus == "KL9", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL145" & KoSC_best_match_K_locus == "KL4", "ok", mismatch_types))) %>%
+  mutate(mismatch_types = (if_else(mismatch_types == "mismatch" & Kp_best_match_K_locus == "KL174" & KoSC_best_match_K_locus == "KL3", "ok", mismatch_types))) -> nonredundant_dataset
+```
+
+#### Count the mismatches
+```{r}
+nonredundant_dataset %>% filter(mismatch_types == "mismatch") %>% nrow()
+```
+
+#### Get match qulaity info for KoSC db matches among the mismatches list
+```{r}
+nonredundant_dataset %>% filter(mismatch_types == "mismatch") %>% group_by(KoSC_match_problems) %>% summarise(n=n())
+```
+
+#### Get match qulaity info for Kp db matches among the mismatches list
+```{r}
+nonredundant_dataset %>% filter(mismatch_types == "mismatch") %>% group_by(Kp_match_problems) %>% summarise(n=n())
+```
+
+#### Count Kp matches with additional genes among mismatches
+```{r}
+nonredundant_dataset %>% filter(mismatch_types == "mismatch") %>% filter(str_detect(Kp_match_problems, "\\+")) %>% summarise(n=n())
+```
+
+#### Count Kp matches with missing genes among mismatches
+```{r}
+nonredundant_dataset %>% filter(mismatch_types == "mismatch") %>% filter(str_detect(Kp_match_problems, "\\-")) %>% summarise(n=n())
+```
+
+#### Supplementary Figure 7
+```{r Supp_fig_3, fig.width = 5, fig.height=4}
+nonredundant_dataset %>%
+  filter(mismatch_types == "mismatch") %>%
+  mutate(
+    KoSC_id = str_remove_all(KoSC_match_id, "%"),
+    Kp_id = str_remove_all(Kp_match_id, "%"),
+    KoSC_cov = str_remove_all(KoSC_match_cov, "%"),
+    Kp_cov = str_remove_all(Kp_match_cov, "%"),
+    id_diff = (as.numeric(KoSC_match_id) - as.numeric(Kp_match_id))*100,
+    cov_diff = (as.numeric(KoSC_match_cov) - as.numeric(Kp_match_cov))*100,
+    extra_genes_diff = KoSC_other_gene_count - Kp_other_genes_count
+  ) %>%
+  ggplot(aes(x = cov_diff, y = extra_genes_diff)) +
+  geom_point() +
+  theme_bw() +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "red") +
+  geom_hline(yintercept = 0, linetype = "dashed", colour = "red") +
+  coord_cartesian(xlim = c(-50, 50), ylim = c(-4, 3)) +
+  ylab("Extra genes difference") +
+  xlab("Coverage difference")
+```
+
+
+# Look at the minority of cases where there is a mismatch and greater coverage of the Kp locus and/or greater number of extra genes reported for the KoSC locus
+```{r}
+nonredundant_dataset %>% filter(mismatch_types == "mismatch") %>% mutate(KoSC_match_id = (str_remove_all(KoSC_match_id, "%")), Kp_match_id = (str_remove_all(Kp_match_id, "%")), KoSC_match_cov = (str_remove_all(KoSC_match_cov, "%")), Kp_match_cov = (str_remove_all(Kp_match_cov, "%"))) %>% mutate(id_diff = as.numeric(KoSC_match_id)-as.numeric(Kp_match_id), cov_diff = as.numeric(KoSC_match_cov)-as.numeric(Kp_match_cov), extra_genes_diff = KoSC_other_gene_count-Kp_other_genes_count) %>% filter(cov_diff < 0 | extra_genes_diff > 0) %>% arrange(Kp_length_discrepency)
+```
+
+
+# Figure 2 - rarefaction curves by species
+
+#### Counts by K locus and species for four most common species
+```{r}
+nonredundant_dataset %>%
+  filter(
+    KoSC_match_confidence == "Typeable",
+    Species %in% c("K. michiganensis","K. oxytoca","K. pasteurii","K. grimontii")
+  ) %>%
+  group_by(Species, KoSC_best_match_K_locus) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = KoSC_best_match_K_locus, values_from = n) %>%
+  as.data.frame() -> K_nums_by_species
+```
+
+#### Change rownames to col 1
+```{r}
+rownames(K_nums_by_species) <- K_nums_by_species$Species
+```
+
+#### Convert NA to 0
+```{r}
+K_nums_by_species[is.na(K_nums_by_species)] <- 0 
+```
+
+#### Plot Figure 1
+```{r FigY, fig.width=5, fig.height=3}
+rarecurve(K_nums_by_species[2:ncol(K_nums_by_species)], tidy = TRUE) %>% 
+  ggplot(aes(x = Sample, y=Species, colour = Site)) + geom_point(size=0.1) + geom_line() +
+  theme_bw() + theme(axis.text.x = element_text(hjust=1, angle = 45)) +
+  scale_x_continuous(breaks=seq(0, 4600, 200)) + scale_y_continuous(breaks=seq(0, 90, 10)) +
+  scale_color_manual("Species", values = c("#177E89", "#FFBC42", "#DB3A34", "#000100")) +
+  ylab("Cumulative number of K loci") + xlab("Number of genomes")
+```
+*Note: For the manuscript version of the figure, the legend was removed and species labels added next to curves using Adobe Illustrator*
+
+#### Number distinct K loci by species
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(Species) %>% summarise(n_kl = n_distinct(KoSC_best_match_K_locus))
+```
+
+
+# K locus frequencies - reported in main text
+
+#### K locus counts among typeables
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_best_match_K_locus) %>% summarise(n=n()) -> K_freqs
+```
+
+#### K loci representing <1% typeable genomes
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_best_match_K_locus) %>% summarise(n=n()) %>% filter(n < (2192*0.01)) %>% nrow()
+```
+
+#### K loci representing >=1% but <2% typeable genomes
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_best_match_K_locus) %>% summarise(n=n()) %>% filter(n >= (2192*0.01) & n < (2192*0.02)) %>% nrow()
+```
+
+#### K loci representing >=2% typeable genomes
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_best_match_K_locus) %>% summarise(n=n()) %>% filter(n >= (2192*0.02)) %>% nrow()
+```
+
+#### K loci in more than one species
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_best_match_K_locus) %>% summarise(n_Species=n_distinct(Species)) %>% left_join(K_freqs, .) %>% filter(n_Species > 1) %>% nrow()
+```
+
+#### K loci in more than two species
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_best_match_K_locus) %>% summarise(n_Species=n_distinct(Species)) %>% left_join(K_freqs, .) %>% filter(n_Species > 2) %>% nrow()
+```
+
+
+#### Count K loci by species
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_best_match_K_locus) %>% summarise(n_Species=n_distinct(Species)) %>% left_join(K_freqs, .) %>% arrange(-n_Species)
+```
+
+
+# Figure 2 - K locus frequencies
+
+#### Make list of K loci representing >= 2% typeable genomes
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_best_match_K_locus) %>% summarise(n=n()) %>% filter(n >= (2192*0.02)) %>% arrange(-n) -> high_freq_K
+```
+
+
+#### Make Species colour code column
+```{r}
+nonredundant_dataset %>% mutate(Species_col = if_else(Species %in% c("K. michiganensis","K. oxytoca","K. pasteurii","K. grimontii"), Species, "other")) -> nonredundant_dataset
+```
+
+```{r}
+nonredundant_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% ggplot(aes(x = KoSC_best_match_K_locus, fill = Species_col)) + geom_bar() +
+  scale_x_discrete(limits = c(high_freq_K$KoSC_best_match_K_locus)) +
+  scale_fill_manual("Species", values = c("#177E89", "#FFBC42", "#DB3A34", "#000100", "grey")) +
+  scale_y_continuous(breaks=c(0, 2192*0.02, 2192*0.04, 2192*0.06, 2192*0.08, 2192*0.10, 2192*0.12), labels = c(0, 2, 4, 6, 8, 10, 12)) +
+  theme_bw() + theme(axis.text.x=element_text(angle=45, hjust=1)) +
+  ylab("% Genomes") + xlab("K oxy SC K loci")
+```
+*Stars to indicate Kp orthologs added in Adobe Illustrator*
+
+# Sero-epi use case - reported in main text
+
+#### Load data
+```{r}
+sero_epi <- read_excel("Supplementary_Tables.xlsx", sheet = "Supp_Table4")
+```
+
+
+#### Check genome counts by study
+```{r}
+sero_epi %>% group_by(Dataset) %>% summarise(n=n())
+```
+
+#### Get species by Dataset
+```{r}
+sero_epi %>%
+  group_by(Dataset, Species) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = Dataset, values_from = n)
+```
+
+#### Count total STs represented
+```{r}
+sero_epi %>% group_by(ST) %>% summarise(n=n()) %>% nrow()
+```
+
+
+#### Get counts for unique STs and KLs by study
+```{r}
+sero_epi %>% group_by(Dataset) %>% summarise(n_KL = n_distinct(`KoSC KL`), n_ST = n_distinct(ST))
+```
+
+
+#### Check KL counts overall
+```{r}
+sero_epi %>% group_by(`KoSC KL`) %>% summarise(n=n()) %>% arrange(-n)
+```
+
+#### Get KL counts by study
+```{r}
+sero_epi %>%
+  group_by(`KoSC KL`, Dataset) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = Dataset, values_from = n)
+```
+* List of KLs that account for at least 5 isolates in each collection: "KL74", "KL34", "KL6", "KL69", "KL83", "KL86", "KL29", "KL76", "KL49", "KL71"*
+
+#### Define list of top KLs for all studies (n>=5 in at least one study) 
+```{r }
+topK <- c("KL74", "KL34", "KL6", "KL69", "KL83", "KL86", "KL29", "KL76", "KL49", "KL71")
+```
+
+#### Mark top KL vs other in datasheet
+```{r}
+sero_epi %>% mutate(topK = if_else(`KoSC KL` %in% topK, `KoSC KL`, "other")) -> sero_epi
+```
+
+
+#### Get ST counts by study
+```{r}
+sero_epi %>%
+  group_by(ST, Dataset) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  tidyr::pivot_wider(names_from = Dataset, values_from = n)
+```
+
+#### Define list of top STs for all studies (n>=5 in at least one study) 
+```{r }
+topSTs <- c("ST266", "ST178", "ST176", "ST43", "ST199", "ST40", "ST19", "ST18", "ST258", "ST11", "ST179", "ST482", "ST85", "ST88", "ST36", "ST199-1LV")
+```
+
+#### Mark top ST vs other in datasheet
+```{r}
+sero_epi %>% mutate(topST = if_else(ST %in% topSTs, ST, "other")) -> sero_epi
+```
+
+
+# Figure 4 - sero-epi use case
+
+#### Make plot of K locus counts by study
+```{r, fig.width=6, fig.height=4}
+#### Make plot of K counts by study
+sero_epi %>% ggplot(aes(x = topK, fill = Dataset)) + geom_bar() +
+  scale_x_discrete(limits= rev(c(topK, "other"))) +
+  xlab("K loci") + ylab("Number of genomes") +
+  theme_bw() + theme(legend.position = "bottom") +
+  scale_fill_manual(values = c("#00A5CF", "#5C2751", "#EE4266")) +
+  facet_grid(. ~ Dataset) + coord_flip() +
+  labs(title = "A",
+     fill = "Dataset"
+     ) -> KL_by_study_plot
+```
+
+```{r}
+KL_by_study_plot <- KL_by_study_plot +
+  labs(title = "A") +
+  theme(
+    plot.title = element_text(face = "bold", size = 16, hjust = 0)
+  )
+```
+
+
+#### Make plot K locus by ST
+```{r}
+sero_epi %>% ggplot(aes(x=topST, y=topK, colour = Dataset)) + 
+  geom_jitter(width = 0.25, height = 0.25, alpha = 0.5) +
+  scale_y_discrete(limits = rev(c(topK, "other"))) + 
+  scale_x_discrete(limits = c(topSTs, "other")) +
+  scale_colour_manual(values = c("#00A5CF", "#5C2751", "#EE4266")) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(hjust = 1, angle = 45), legend.position = "none", axis.title.y = element_blank(), axis.text.y = element_blank(), axis.ticks.y = element_blank()) +
+  xlab("7-gene ST") +
+   labs(
+     title = "B",
+     colour = "Dataset"
+     ) -> K_vs_ST_plot
+```
+
+
+```{r Figure3, fig.width=8, fig.height=5}
+# ggsave(
+#   "~/Ko_db/Figure4_default.png",
+#   plot = KL_by_study_plot + K_vs_ST_plot,
+#   width = 8,
+#   height = 5,
+#   dpi = 300
+# )
+```
+
+```{r}
+# ggsave(
+#   "~/Ko_db/Figure4_default.pdf",
+#   plot = KL_by_study_plot + K_vs_ST_plot,
+#   width = 8,
+#   height = 5,
+#   dpi = 300
+# )
+```
+
+# Rare K loci - reported in Supplementary Results
+
+#### Find rare loci
+```{r}
+final_dataset %>% filter(KoSC_match_confidence == "Typeable") %>% group_by(KoSC_best_match_K_locus) %>% summarise(n=n()) %>% filter(n<2) -> rare_loci
+```
+
+```{r}
+final_dataset %>% filter(KoSC_match_confidence == "Typeable", KoSC_best_match_K_locus %in% rare_loci$KoSC_best_match_K_locus)
+```
+
