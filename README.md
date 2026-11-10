@@ -46,6 +46,11 @@ For full details on the contents of the K locus database and how to use it, plea
 18. `18_kaptive_v3.sh` - run Kaptive v3.2.1 to generate typing results reported in paper using the _K. oxytoca_ Species Complex database archived [here](10.5281/zenodo.22866203) and the _K. pneumoniae_ Species Complex database archived [here](https://github.com/klebgenomics/Kaptive/releases/tag/v3.2.0).
 19. `19_hmm_wzy.sh` - run HMM search for _wzy_ genes in genomes with K loci without annotated _wzy_ 
 
+## Statistics and Figures
+
+20. `clinker_figure1` - contains the input files required to generate the Clinker plot in Figure 1. Code for running clinker is provided in `17_clinker.sh`. Change amino acid identity threshold used for 'links' to 82.5% and re-order the loci horizontally to match the figure. Gene names were annotated in Adobe Illustrator. (Note: this step was run on a Macbook Air, M4.)
+21. `stats_and_figs_in_R` - contains the input data files and R code (`.rmd` format) used to generate data summaries and statistics reported in the manuscript, as well as Figures 2 - 4. The code is also provided in a rendered `.html` file. (Note: this step was run on a Macbook Air, M4.) 
+
 ## Citations
 
 If you found **this resource** useful, please cite: 
